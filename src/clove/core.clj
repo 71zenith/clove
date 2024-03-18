@@ -28,35 +28,37 @@
        (parse)
        (as-hickory)
        (s/select (s/descendant (s/class "ipc-metadata-list-summary-item__t")))
-       (#(map (fn [x] [(assoc {} :title (str/join(:content x)) :link (get-in x [:attrs :href]))]) %))
+       (map (fn [x] [(assoc {} :title (str/join(:content x)) :link (get-in x [:attrs :href]))]) )
        (flatten)
        ))
 
 (defn get-sources
   []
   "return the hashes and referrer"
+  (def get-hash (comp :data-hash :attrs))
+  (def server (comp str/join flatten :content))
   (let [result (client/get "https://vidsrc.me/embed/tv/76479/3/1" {:headers {"User-Agent" user-agent}}) html (:body result) referrer (first (:trace-redirects result))]
     (->> html
          (parse)
          (as-hickory)
          (s/select (s/descendant (s/class "server")))
-         (#(map (fn [x] [(assoc {} :source (str/join(:content x)) :hash (get-in x [:attrs :data-hash]))]) %))
-         (flatten)
-         (#(conj % referrer))
+         (map get-hash)
+         ;; (#(map (fn [x] [(assoc {} :source (str/join(:content x)) :hash (get-in x [:attrs :data-hash]))])))
+         ;; (flatten)
+         ;; (#(conj % referrer))
          )))
 
 (defn get-source
   [hash referrer]
   "return url and url-referrer"
-  (def get-data-h (partial s/select (s/id :hidden)))
-  ;; (def get-data-i (partial s/select (s/tag :data-i)))
+  (def get-data-h (comp :data-h :attrs first #(s/select (s/id :hidden) %)))
+  (def get-data-i (comp :data-i :attrs first #(s/select (s/tag :body) %)))
   (let [result (client/get (str rcp-url "/" hash) {:headers {"User-Agent" user-agent "Referer" referrer}}) html (:body result)]
     (->> html
          (parse)
          (as-hickory)
-         (get-data-h)
-         (#(map (fn [x] (get-in x [:attrs :data-h])) %)))
-      ))
+         )))
+
 (defn -main
   "I don't do a whole lot ... yet."
   [& args])
