@@ -35,22 +35,42 @@
        (map (fn [x] (assoc {} (shows x) (ids x))))
        ))
 
+(defn filter-season
+  "check if seasons"
+  [m]
+  (def check-s (comp #(get-in % [:attrs :data-testid])))
+  (->> m
+       (filter #(= "tab-season-entry" (check-s %)))))
+
 (defn get-season
-  "get episodes data"
+  "get season data"
   [imdb-id]
   (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:headers {"User-Agent" user-agent}}) html (:body result) ]
     (->> html
          (parse)
          (as-hickory)
-         (s/select (s/child (s/class "ipc-tab- ipc-tab-link ipc-tab--on-base ipc-tab--active")))
-                            ;; (s/class "ipc-tab-link")
-                            ;; (s/class "ipc-tab--on-base")
-                            ;; (s/class "ipc-tab--active")))
+         (s/select (s/child (s/class "ipc-tab-link")))
+         (filter-season)
+         (map :content)
+         (flatten)
          ))
-
+  )
+(defn get-episode
+  "get season data"
+  [imdb-id]
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:headers {"User-Agent" user-agent}}) html (:body result) ]
+    (->> html
+         (parse)
+         (as-hickory)
+         (s/select (s/child (s/class "ipc-tab-link")))
+         (filter-season)
+         (map :content)
+         (flatten)
+         ))
   )
 
-(defn check-episodes
+
+(defn check-type
   "check if movie or series"
   [imdb-id]
   (let [result (client/get (str/join [search-site "title/" imdb-id ]) {:headers {"User-Agent" user-agent}}) html (:body result) ]
@@ -63,10 +83,12 @@
                    :content
                    (first)
                    (#(if (not= "Episodes" %)
-                       (format "Its a movie")
+                       (format "movie/%s" imdb-id)
                        (format "Its a series")))
                    )
     ))
+
+
 
 (defn hex-to-ascii [hex-str]
   (->> hex-str
@@ -172,7 +194,9 @@
   [& args]
   (let [query (first args)]
     (->> query
+         (check-type)
          (get-sources)
          (get-source)
          (vidsrc-ex)
+         (format)
          )))
