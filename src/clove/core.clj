@@ -6,10 +6,12 @@
   (:import [java.util Base64])
   (:require [hickory.select :as s])
   (:gen-class))
+
 (def user-agent "Mozilla/5.0 (X11; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0")
-(def search-site "https://www.imdb.com/find")
+(def search-site "https://www.imdb.com/")
 (def base-url "https://vidsrc.me/embed/")
 (def rcp-url "https://rcp.vidsrc.me/rcp")
+
 (defn take-input
   "input"
   []
@@ -21,16 +23,50 @@
 (defn search
   "searches for material"
   [input]
+  (def shows (comp str/join :content))
+  (def ids (comp #(re-find #"tt\d+" %) #(get-in % [:attrs :href])))
   (->> input
        (str/trim)
-       (#(client/get search-site {:headers {"User-Agent" user-agent} :query-params {"q" % "s" "tt" "ttype" ["tv" "ft"]}}))
+       (#(client/get (str/join [search-site "find/" ]) {:headers {"User-Agent" user-agent} :query-params {"q" % "s" "tt" "ttype" ["tv" "ft"]}}))
        (:body)
        (parse)
        (as-hickory)
        (s/select (s/descendant (s/class "ipc-metadata-list-summary-item__t")))
-       (map (fn [x] [(assoc {} :title (str/join(:content x)) :link (get-in x [:attrs :href]))]) )
-       (flatten)
+       (map (fn [x] (assoc {} (shows x) (ids x))))
        ))
+
+(defn get-season
+  "get episodes data"
+  [imdb-id]
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:headers {"User-Agent" user-agent}}) html (:body result) ]
+    (->> html
+         (parse)
+         (as-hickory)
+         (s/select (s/child (s/class "ipc-tab- ipc-tab-link ipc-tab--on-base ipc-tab--active")))
+                            ;; (s/class "ipc-tab-link")
+                            ;; (s/class "ipc-tab--on-base")
+                            ;; (s/class "ipc-tab--active")))
+         ))
+
+  )
+
+(defn check-episodes
+  "check if movie or series"
+  [imdb-id]
+  (let [result (client/get (str/join [search-site "title/" imdb-id ]) {:headers {"User-Agent" user-agent}}) html (:body result) ]
+    (->> html
+         (parse)
+         (as-hickory)
+         (s/select (s/child (s/class "ipc-title__text")
+                            (s/tag :span)))
+                   (first)
+                   :content
+                   (first)
+                   (#(if (not= "Episodes" %)
+                       (format "Its a movie")
+                       (format "Its a series")))
+                   )
+    ))
 
 (defn hex-to-ascii [hex-str]
   (->> hex-str
@@ -47,6 +83,7 @@
        (#(str/replace % "-" "+"))
        (#(String. (.decode (Base64/getDecoder) (.getBytes % "UTF-8")) "UTF-8")))
   )
+
 (defn recur-it
   "smtg"
   [b64]
@@ -133,8 +170,9 @@
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (let [query (take-input)]
+  (let [query (first args)]
     (->> query
          (get-sources)
          (get-source)
-         (vidsrc-ex))))
+         (vidsrc-ex)
+         )))
