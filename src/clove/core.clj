@@ -33,6 +33,9 @@
        (as-hickory)
        (s/select (s/descendant (s/class "ipc-metadata-list-summary-item__t")))
        (map (fn [x] (assoc {} (shows x) (ids x))))
+       (first)
+       (vals)
+       (apply str)
        ))
 
 (defn filter-season
@@ -42,53 +45,40 @@
   (->> m
        (filter #(= "tab-season-entry" (check-s %)))))
 
-(defn get-season
-  "get season data"
-  [imdb-id]
-  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:headers {"User-Agent" user-agent}}) html (:body result) ]
+(defn get-episode-list
+  "get all episode"
+  [imdb-id season]
+  (def get-episode-num (comp #(str/replace % #"E" "") #(re-find #"E\d+" %)))
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes/" ]) {:headers {"User-Agent" user-agent} :query-params {"season" season}}) html (:body result) ]
     (->> html
          (parse)
          (as-hickory)
-         (s/select (s/child (s/class "ipc-tab-link")))
-         (filter-season)
+         (s/select (s/child (s/class "ipc-title__text")))
+         (filter #(= (:tag %) :div))
          (map :content)
          (flatten)
-         ))
-  )
-(defn get-episode
+         (map get-episode-num)
+         (first)
+         (str "tv/" imdb-id "/" season "/")
+         )))
+
+(defn get-season-list
   "get season data"
   [imdb-id]
-  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:headers {"User-Agent" user-agent}}) html (:body result) ]
-    (->> html
-         (parse)
-         (as-hickory)
-         (s/select (s/child (s/class "ipc-tab-link")))
-         (filter-season)
-         (map :content)
-         (flatten)
-         ))
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:headers {"User-Agent" user-agent} :throw-exceptions false}) html (:body result) status (:status result)]
+    (if (= status 404)
+     (str "movie/" imdb-id)
+      (->> html
+           (parse)
+           (as-hickory)
+           (s/select (s/child (s/class "ipc-tab-link")))
+           (filter-season)
+           (map :content)
+           (flatten)
+           (first)
+           (get-episode-list imdb-id)
+           )))
   )
-
-
-(defn check-type
-  "check if movie or series"
-  [imdb-id]
-  (let [result (client/get (str/join [search-site "title/" imdb-id ]) {:headers {"User-Agent" user-agent}}) html (:body result) ]
-    (->> html
-         (parse)
-         (as-hickory)
-         (s/select (s/child (s/class "ipc-title__text")
-                            (s/tag :span)))
-                   (first)
-                   :content
-                   (first)
-                   (#(if (not= "Episodes" %)
-                       (format "movie/%s" imdb-id)
-                       (format "Its a series")))
-                   )
-    ))
-
-
 
 (defn hex-to-ascii [hex-str]
   (->> hex-str
@@ -194,9 +184,10 @@
   [& args]
   (let [query (first args)]
     (->> query
-         (check-type)
+         (search)
+         (get-season-list)
          (get-sources)
          (get-source)
          (vidsrc-ex)
-         (format)
+         (println)
          )))
