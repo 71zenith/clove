@@ -27,7 +27,7 @@
   (def ids (comp #(re-find #"tt\d+" %) #(get-in % [:attrs :href])))
   (->> input
        (str/trim)
-       (#(client/get (str/join [search-site "find/" ]) {:headers {"User-Agent" user-agent} :query-params {"q" % "s" "tt" "ttype" ["tv" "ft"]}}))
+       (#(client/get (str/join [search-site "find/" ]) {:decode-cookies false :headers {"User-Agent" user-agent} :query-params {"q" % "s" "tt" "ttype" ["tv" "ft"]}}))
        (:body)
        (parse)
        (as-hickory)
@@ -47,10 +47,10 @@
 
 (defn get-episode-list
   "get all episode"
-  [imdb-id season]
+  [html imdb-id season]
   (def get-episode-num (comp #(str/replace % #"E" "") #(re-find #"E\d+" %)))
-  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes/" ]) {:headers {"User-Agent" user-agent} :query-params {"season" season}}) html (:body result) ]
-    (->> html
+  (let [body html]
+    (->> body
          (parse)
          (as-hickory)
          (s/select (s/child (s/class "ipc-title__text")))
@@ -65,7 +65,7 @@
 (defn get-season-list
   "get season data"
   [imdb-id]
-  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:headers {"User-Agent" user-agent} :throw-exceptions false}) html (:body result) status (:status result)]
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:decode-cookies false :headers {"User-Agent" user-agent} :throw-exceptions false}) html (:body result) status (:status result)]
     (if (= status 404)
      (str "movie/" imdb-id)
       (->> html
@@ -76,7 +76,7 @@
            (map :content)
            (flatten)
            (first)
-           (get-episode-list imdb-id)
+           (get-episode-list html imdb-id)
            )))
   )
 
@@ -132,7 +132,7 @@
 (defn get-source-url
   "returns source url"
   [url referer]
-  (let [result (client/get url {:redirect-strategy :none :headers {"User-Agent" user-agent "Referer" referer}})]
+  (let [result (client/get url {:decode-cookies false :redirect-strategy :none :headers {"User-Agent" user-agent "Referer" referer}})]
     (->> result
          :headers
          :Location))
