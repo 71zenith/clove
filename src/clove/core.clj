@@ -65,9 +65,9 @@
 
 (defn get-episode-list
   "get all episode"
-  [html imdb-id season]
+  [imdb-id season]
   (def get-episode-num (comp #(str/replace % #"E" "") #(re-find #"E\d+" %)))
-  (let [body html]
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes"]) {:cookie-policy :none :query-params {"season" season} :headers {"User-Agent" user-agent}}) body (:body result) ]
     (->> body
          (parse)
          (as-hickory)
@@ -75,6 +75,7 @@
          (filter #(= (:tag %) :div))
          (map :content)
          (flatten)
+         (println)
          (map get-episode-num)
          (take-input "Eps:")
          (str "tv/" imdb-id "/" season "/"))))
@@ -95,7 +96,7 @@
            (map :content)
            (flatten)
            (take-input "Ss:")
-           (get-episode-list html imdb-id)))))
+           (get-episode-list imdb-id)))))
 
 (defn hex-to-ascii [hex-str]
   (->> hex-str
@@ -187,9 +188,18 @@
          (enc-hls-url)
          (decode-hls-url))))
 
+(def cli-options
+  ;; An option with a required argument
+  [["-p" "--player <program>" "Media Player"
+    :default "mpv"
+    :parse-fn str]
+   ["-d" "--download" "Download Flag"]])
+
 (defn -main
   "I do a whole lot actually..."
   [& args]
+  (println args)
+  (parse-opts args cli-options)
   (let [query (first args)]
     (try
       (->> query
