@@ -2,7 +2,7 @@
   (:require [clojure.string :as str])
   (:require [clj-http.client :as client])
   (:require [clojure.java.io :as io])
-  (:require [clojure.tools.cli :as cli])
+  (:use [clojure.tools.cli :only [parse-opts]])
   (:use [clojure.java.shell :only [sh]])
   (:use [hickory.core])
   (:import [java.util Base64])
@@ -82,7 +82,9 @@
 (defn get-season-list
   "get season data"
   [imdb-id]
-  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes"]) {:cookie-policy :none :headers {"User-Agent" user-agent} :throw-exceptions false}) html (:body result) status (:status result)]
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes"]) {:cookie-policy :none :headers {"User-Agent" user-agent} :throw-exceptions false})
+        html (:body result)
+        status (:status result)]
     (if (= status 404)
       (str "movie/" imdb-id)
       (->> html
@@ -150,7 +152,9 @@
   [vidsrc-url]
   "(hash referer)"
   (def get-hash (comp :data-hash :attrs))
-  (let [result (client/get (str/join [base-url vidsrc-url]) {:headers {"User-Agent" user-agent}}) html (:body result) referer (first (:trace-redirects result))]
+  (let [result (client/get (str/join [base-url vidsrc-url]) {:headers {"User-Agent" user-agent}})
+        html (:body result)
+        referer (first (:trace-redirects result))]
     (->> html
          (parse)
          (as-hickory)
@@ -164,7 +168,9 @@
   "(url-referer source-url)"
   (def get-data-h (comp :data-h :attrs first #(s/select (s/id :hidden) %)))
   (def get-data-i (comp :data-i :attrs first #(s/select (s/tag :body) %)))
-  (let [rcp-final (str rcp-url "/" hash) result (client/get rcp-final {:headers {"User-Agent" user-agent "Referer" referer}}) html (:body result)]
+  (let [rcp-final (str rcp-url "/" hash)
+        result (client/get rcp-final {:headers {"User-Agent" user-agent "Referer" referer}})
+        html (:body result)]
     (->> html
          (parse)
          (as-hickory)
