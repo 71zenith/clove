@@ -1,3 +1,0 @@
-{:deps {org.clojure/clojure {:mvn/version "1.11.1"}
-        io.github.joakimen/fzf.clj {:git/sha "75ae531ae0a21096677e4f2d5209f12547f68bbc"}
-        org.clj-commons/hickory {:mvn/version "0.7.4"}}}

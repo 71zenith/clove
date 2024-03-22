@@ -97,7 +97,7 @@
   )
 
 (defn recur-it
-  "smtg"
+  "m3u8"
   [b64]
   (let [input b64]
     (if (re-find #"\/@#@\/[^=\/]+==" input)
@@ -105,13 +105,11 @@
       input))
   )
 
-
 (defn decode-hls-url
   "(final url)"
   [enc-url]
   (->> enc-url
        (#(subs % 2))
-       (#(str/replace % #"/@#@/[^=\/]+==" ""))
        (recur-it)
        (decode-base64)
        ))
@@ -168,7 +166,7 @@
          )))
 
 (defn vidsrc-ex
-  "final"
+  "link"
   [[referer url]]
   (def enc-hls-url (comp second #(re-find #"file:\"([^\"]+)\"" %)))
   (let [result (client/get url {:body "string" :headers {"User-Agent" user-agent "Referer" referer}})]
