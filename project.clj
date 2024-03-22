@@ -5,8 +5,8 @@
             :url "https://www.gnu.org/licenses/gpl-3.0.en.html"}
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [clj-http "3.12.3"]
-                 [hickory "0.7.1"]
-                 [cheshire "5.12.0"]]
+                 [org.clojure/tools.cli "1.1.230"]
+                 [hickory "0.7.1"]]
   :main ^:skip-aot clove.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all

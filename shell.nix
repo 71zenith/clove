@@ -10,6 +10,7 @@ in
       leiningen
       gum
       jdk
+      cljfmt
       python311Packages.epc
       python311Packages.orjson
       python311Packages.sexpdata

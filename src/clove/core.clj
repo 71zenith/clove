@@ -2,6 +2,7 @@
   (:require [clojure.string :as str])
   (:require [clj-http.client :as client])
   (:require [clojure.java.io :as io])
+  (:require [clojure.tools.cli :as cli])
   (:use [clojure.java.shell :only [sh]])
   (:use [hickory.core])
   (:import [java.util Base64])
@@ -30,14 +31,14 @@
 (defn ppp
   "imdb-id"
   [fmt-map]
-  (let [lst (flatten (map keys fmt-map)) fmt-list (str/join "\n" (map-indexed #(str (inc %1) ". " %2) lst))]
+  (let [lst (flatten (map keys fmt-map))
+        fmt-list (str/join "\n" (map-indexed #(str (inc %1) ". " %2) lst))]
     (->>
      (take-input fmt-list)
      (read-string)
      (#(nth fmt-map (dec %1)))
      (vals)
-     (apply str)
-     )))
+     (apply str))))
 
 (defn search
   "imdb-id"
@@ -46,15 +47,14 @@
   (def ids (comp #(re-find #"tt\d+" %) #(get-in % [:attrs :href])))
   (->> input
        (str/trim)
-       (#(client/get (str/join [search-site "find/" ]) {:cookie-policy :none :headers {"User-Agent" user-agent} :query-params {"q" % "s" "tt" "ttype" ["tv" "ft"]}}))
+       (#(client/get (str/join [search-site "find/"]) {:cookie-policy :none :headers {"User-Agent" user-agent} :query-params {"q" % "s" "tt" "ttype" ["tv" "ft"]}}))
        (:body)
        (parse)
        (as-hickory)
        (s/select (s/descendant (s/class "ipc-metadata-list-summary-item__t")))
        (map (fn [x] (assoc {} (shows x) (ids x))))
        (take 8)
-       (ppp)
-       ))
+       (ppp)))
 
 (defn filter-season
   "check if seasons"
@@ -77,15 +77,14 @@
          (flatten)
          (map get-episode-num)
          (take-input "Eps:")
-         (str "tv/" imdb-id "/" season "/")
-         )))
+         (str "tv/" imdb-id "/" season "/"))))
 
 (defn get-season-list
   "get season data"
   [imdb-id]
-  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:cookie-policy :none :headers {"User-Agent" user-agent} :throw-exceptions false}) html (:body result) status (:status result)]
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes"]) {:cookie-policy :none :headers {"User-Agent" user-agent} :throw-exceptions false}) html (:body result) status (:status result)]
     (if (= status 404)
-     (str "movie/" imdb-id)
+      (str "movie/" imdb-id)
       (->> html
            (parse)
            (as-hickory)
@@ -94,9 +93,7 @@
            (map :content)
            (flatten)
            (take-input "Ss:")
-           (get-episode-list html imdb-id)
-           )))
-  )
+           (get-episode-list html imdb-id)))))
 
 (defn hex-to-ascii [hex-str]
   (->> hex-str
@@ -111,8 +108,7 @@
   (->> hls
        (#(str/replace % "_" "/"))
        (#(str/replace % "-" "+"))
-       (#(String. (.decode (Base64/getDecoder) (.getBytes % "UTF-8")) "UTF-8")))
-  )
+       (#(String. (.decode (Base64/getDecoder) (.getBytes % "UTF-8")) "UTF-8"))))
 
 (defn recur-it
   "m3u8"
@@ -120,8 +116,7 @@
   (let [input b64]
     (if (re-find #"\/@#@\/[^=\/]+==" input)
       (recur (str/replace input #"\/@#@\/[^=\/]+==" ""))
-      input))
-  )
+      input)))
 
 (defn decode-hls-url
   "(final url)"
@@ -129,8 +124,7 @@
   (->> enc-url
        (#(subs % 2))
        (recur-it)
-       (decode-base64)
-       ))
+       (decode-base64)))
 
 (defn decode-src
   [enc seed]
@@ -142,8 +136,7 @@
                             #(char (bit-xor (get enc-b %)
                                             (int (nth seed-l (mod % (count seed-l))))))
                             (range full)))
-                 #"^" "https:")
-    ))
+                 #"^" "https:")))
 
 (defn get-source-url
   "returns source url"
@@ -151,9 +144,7 @@
   (let [result (client/get url {:cookie-policy :none :redirect-strategy :none :headers {"User-Agent" user-agent "Referer" referer}})]
     (->> result
          :headers
-         :Location))
-  )
-
+         :Location)))
 
 (defn get-sources
   [vidsrc-url]
@@ -166,9 +157,7 @@
          (s/select (s/descendant (s/class "server")))
          (first)
          get-hash
-         (conj () referer)
-         )))
-
+         (conj () referer))))
 
 (defn get-source
   [[hash referer]]
@@ -180,8 +169,7 @@
          (parse)
          (as-hickory)
          (#(decode-src (get-data-h %) (get-data-i %)))
-         (list rcp-final)
-         )))
+         (list rcp-final))))
 
 (defn vidsrc-ex
   "link"
@@ -191,9 +179,7 @@
     (->> result
          :body
          (enc-hls-url)
-         (decode-hls-url)
-         ))
-  )
+         (decode-hls-url))))
 
 (defn -main
   "I do a whole lot actually..."
@@ -206,7 +192,6 @@
            (get-sources)
            (get-source)
            (vidsrc-ex)
-           (sh "mpv")
-           )
+           (sh "mpv"))
       (System/exit 0)
       (catch Exception e (println (str "caught exception: " (.getMessage e)))))))
