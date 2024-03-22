@@ -2,6 +2,7 @@
   (:require [clojure.string :as str])
   (:require [clj-http.client :as client])
   (:require [clojure.java.io :as io])
+  (:use [clojure.java.shell :only [sh]])
   (:use [hickory.core])
   (:import [java.util Base64])
   (:require [hickory.select :as s])
@@ -14,14 +15,32 @@
 
 (defn take-input
   "input"
-  []
+  [& prompt]
+  (apply println prompt)
+  (printf "=> ")
+  (flush)
   (loop [input (read-line)]
     (if (empty? (str/trim input))
-      (recur (read-line))
+      (do
+        (printf "=> ")
+        (flush)
+        (recur (read-line)))
       input)))
 
+(defn ppp
+  "imdb-id"
+  [fmt-map]
+  (let [lst (flatten (map keys fmt-map)) fmt-list (str/join "\n" (map-indexed #(str (inc %1) ". " %2) lst))]
+    (->>
+     (take-input fmt-list)
+     (read-string)
+     (#(nth fmt-map (dec %1)))
+     (vals)
+     (apply str)
+     )))
+
 (defn search
-  "searches for material"
+  "imdb-id"
   [input]
   (def shows (comp str/join :content))
   (def ids (comp #(re-find #"tt\d+" %) #(get-in % [:attrs :href])))
@@ -33,9 +52,7 @@
        (as-hickory)
        (s/select (s/descendant (s/class "ipc-metadata-list-summary-item__t")))
        (map (fn [x] (assoc {} (shows x) (ids x))))
-       (first)
-       (vals)
-       (apply str)
+       (ppp)
        ))
 
 (defn filter-season
@@ -58,7 +75,7 @@
          (map :content)
          (flatten)
          (map get-episode-num)
-         (first)
+         (take-input "Eps:")
          (str "tv/" imdb-id "/" season "/")
          )))
 
@@ -75,7 +92,7 @@
            (filter-season)
            (map :content)
            (flatten)
-           (first)
+           (take-input "Ss:")
            (get-episode-list html imdb-id)
            )))
   )
@@ -188,6 +205,7 @@
            (get-sources)
            (get-source)
            (vidsrc-ex)
-           (println)
+           (sh "mpv")
            )
+      (System/exit 0)
       (catch Exception e (println (str "caught exception: " (.getMessage e)))))))
