@@ -52,6 +52,7 @@
        (as-hickory)
        (s/select (s/descendant (s/class "ipc-metadata-list-summary-item__t")))
        (map (fn [x] (assoc {} (shows x) (ids x))))
+       (take 8)
        (ppp)
        ))
 
