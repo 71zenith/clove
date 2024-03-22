@@ -27,7 +27,7 @@
   (def ids (comp #(re-find #"tt\d+" %) #(get-in % [:attrs :href])))
   (->> input
        (str/trim)
-       (#(client/get (str/join [search-site "find/" ]) {:decode-cookies false :headers {"User-Agent" user-agent} :query-params {"q" % "s" "tt" "ttype" ["tv" "ft"]}}))
+       (#(client/get (str/join [search-site "find/" ]) {:cookie-policy :none :headers {"User-Agent" user-agent} :query-params {"q" % "s" "tt" "ttype" ["tv" "ft"]}}))
        (:body)
        (parse)
        (as-hickory)
@@ -65,7 +65,7 @@
 (defn get-season-list
   "get season data"
   [imdb-id]
-  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:decode-cookies false :headers {"User-Agent" user-agent} :throw-exceptions false}) html (:body result) status (:status result)]
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes" ]) {:cookie-policy :none :headers {"User-Agent" user-agent} :throw-exceptions false}) html (:body result) status (:status result)]
     (if (= status 404)
      (str "movie/" imdb-id)
       (->> html
@@ -132,7 +132,7 @@
 (defn get-source-url
   "returns source url"
   [url referer]
-  (let [result (client/get url {:decode-cookies false :redirect-strategy :none :headers {"User-Agent" user-agent "Referer" referer}})]
+  (let [result (client/get url {:cookie-policy :none :redirect-strategy :none :headers {"User-Agent" user-agent "Referer" referer}})]
     (->> result
          :headers
          :Location))
@@ -180,14 +180,16 @@
   )
 
 (defn -main
-  "I don't do a whole lot ... yet."
+  "I do a whole lot actually..."
   [& args]
   (let [query (first args)]
-    (->> query
-         (search)
-         (get-season-list)
-         (get-sources)
-         (get-source)
-         (vidsrc-ex)
-         (println)
-         )))
+    (try
+      (->> query
+           (search)
+           (get-season-list)
+           (get-sources)
+           (get-source)
+           (vidsrc-ex)
+           (println)
+           )
+      (catch Exception e (println (str "caught exception: " (.getMessage e)))))))
