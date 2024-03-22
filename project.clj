@@ -1,4 +1,4 @@
-(defproject clove "0.1.0"
+(defproject clove "0.2.0"
   :description "vidsrc scraper"
   :url "https://github.com/71zenith/clove"
   :license {:name "GPL-3.0"
