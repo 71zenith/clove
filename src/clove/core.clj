@@ -2,7 +2,7 @@
   (:require [clojure.string :as str])
   (:require [clj-http.client :as client])
   (:require [clojure.java.io :as io])
-  (:use [clojure.tools.cli :only [parse-opts]])
+  (:require [clojure.tools.cli :refer [parse-opts]])
   (:use [clojure.java.shell :only [sh]])
   (:use [hickory.core])
   (:import [java.util Base64])
@@ -75,7 +75,6 @@
          (filter #(= (:tag %) :div))
          (map :content)
          (flatten)
-         (println)
          (map get-episode-num)
          (take-input "Eps:")
          (str "tv/" imdb-id "/" season "/"))))
@@ -192,15 +191,20 @@
   ;; An option with a required argument
   [["-p" "--player <program>" "Media Player"
     :default "mpv"
-    :parse-fn str]
-   ["-d" "--download" "Download Flag"]])
+    ]
+   ["-d" "--debug" "Raw link"]])
+
+(defn play
+  [opts link]
+  (condp = (nil? (:debug opts))
+     false (println link)
+     true (sh "mpv" link)))
 
 (defn -main
   "I do a whole lot actually..."
   [& args]
-  (println args)
-  (parse-opts args cli-options)
-  (let [query (first args)]
+  (let [{:keys [options arguments]} (parse-opts args cli-options)
+        query (str/join " " arguments)]
     (try
       (->> query
            (search)
@@ -208,6 +212,6 @@
            (get-sources)
            (get-source)
            (vidsrc-ex)
-           (sh "mpv"))
+           (play options))
       (System/exit 0)
       (catch Exception e (println (str "caught exception: " (.getMessage e)))))))
