@@ -188,7 +188,6 @@
          (decode-hls-url))))
 
 (def cli-options
-  ;; An option with a required argument
   [["-p" "--player <program>" "Media Player"
     :default "mpv"
     ]
@@ -198,7 +197,7 @@
   [opts link]
   (condp = (nil? (:debug opts))
      false (println link)
-     true (sh "mpv" link)))
+     true (sh (:player opts) link)))
 
 (defn -main
   "I do a whole lot actually..."
