@@ -67,7 +67,7 @@
   "get all episode"
   [imdb-id season]
   (def get-episode-num (comp #(str/replace % #"E" "") #(re-find #"E\d+" %)))
-  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes"]) {:cookie-policy :none :query-params {"season" season} :headers {"User-Agent" user-agent}}) body (:body result) ]
+  (let [result (client/get (str/join [search-site "title/" imdb-id "/episodes"]) {:cookie-policy :none :query-params {"season" season} :headers {"User-Agent" user-agent}}) body (:body result)]
     (->> body
          (parse)
          (as-hickory)
@@ -187,22 +187,21 @@
          (enc-hls-url)
          (decode-hls-url))))
 
-(def cli-options
+(def cli-opts
   [["-p" "--player <program>" "Media Player"
-    :default "mpv"
-    ]
+    :default "mpv"]
    ["-d" "--debug" "Raw link"]])
 
 (defn play
   [opts link]
   (condp = (nil? (:debug opts))
-     false (println link)
-     true (sh (:player opts) link)))
+    false (println link)
+    true (sh (:player opts) link)))
 
 (defn -main
   "I do a whole lot actually..."
   [& args]
-  (let [{:keys [options arguments]} (parse-opts args cli-options)
+  (let [{:keys [options arguments]} (parse-opts args cli-opts)
         query (str/join " " arguments)]
     (try
       (->> query
