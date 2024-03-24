@@ -140,14 +140,6 @@
                             (range full)))
                  #"^" "https:")))
 
-(defn get-source-url
-  "returns source url"
-  [url referer]
-  (let [result (client/get url {:cookie-policy :none :redirect-strategy :none :headers {"User-Agent" user-agent "Referer" referer}})]
-    (->> result
-         :headers
-         :Location)))
-
 (defn get-sources
   [vidsrc-url]
   "(hash referer)"
@@ -188,20 +180,22 @@
          (decode-hls-url))))
 
 (def cli-opts
-  [["-p" "--player <program>" "Media Player"
-    :default "mpv"]
-   ["-d" "--debug" "Raw link"]])
+  [["-p" "--player PLAYER" "Media Player" :default "mpv" ]
+   ["-s" "--season" "Season" :parse-fn read-string]
+   ["-e" "--episode" "Episode" :parse-fn read-string]
+   ["-d" "--debug" "Raw link" :default false]])
 
 (defn play
   [opts link]
-  (condp = (nil? (:debug opts))
-    false (println link)
-    true (sh (:player opts) link)))
+  (condp = (:debug opts)
+    true (println link)
+    false (sh (:player opts) link)))
 
 (defn -main
   "I do a whole lot actually..."
   [& args]
-  (let [{:keys [options arguments]} (parse-opts args cli-opts)
+  (def opts-map (parse-opts args cli-opts))
+  (let [{:keys [options arguments]} opts-map
         query (str/join " " arguments)]
     (try
       (->> query
